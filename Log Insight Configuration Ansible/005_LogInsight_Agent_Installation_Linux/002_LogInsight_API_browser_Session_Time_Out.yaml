@@ -1,0 +1,66 @@
+---
+- name: Log Insight API login and NTP Configuration
+  hosts: localhost
+  gather_facts: no
+  
+  tasks:
+    - name: Include Secret Environment Items
+      include_vars:
+        file: secrets.yml
+        name: secret
+
+    #https://vmw-loginsight.github.io/#Getting-started-with-the-Log-Insight-REST-API
+    - name: 001. Log Insight Login
+      uri:
+        url: "https://{{secret.server}}:9543/api/v1/sessions"
+        method: POST
+        body: 
+          username: "{{secret.ui_username}}"
+          password: "{{secret.ui_password}}"
+          provider: "{{secret.provider}}"
+        body_format: json
+        status_code: 200
+        validate_certs: no
+        use_proxy: no
+      register: login_details
+    
+    #https://vmw-loginsight.github.io/#ui_browser_session
+    - name: 002. Get Browser Session  time out details
+      uri:
+        url: "https://{{secret.server}}:9543/api/v1/ui/browser-session"
+        validate_certs: no
+        headers:
+          Authorization: "Bearer {{login_details.json.sessionId}}"
+      register: browser_session_timeout_details
+
+    - name: Log002 - Check Browser Session details
+      debug:
+        var: browser_session_timeout_details.json
+
+    #https://vmw-loginsight.github.io/#ui_browser_session
+    - name: 003. Set Browser Session time out
+      uri:
+        url: "https://{{secret.server}}:9543/api/v1/ui/browser-session"
+        method: PUT
+        body:
+          timeout: "{{secret.browsersessiontimeout}}" 
+        body_format: json            
+        validate_certs: no
+        headers:
+          Authorization: "Bearer {{login_details.json.sessionId}}"
+      register: set_browser_session_timeout_details
+
+    #https://vmw-loginsight.github.io/#ui_browser_session
+    - name: 002. Get Browser Session time out details
+      uri:
+        url: "https://{{secret.server}}:9543/api/v1/ui/browser-session"
+        validate_certs: no
+        headers:
+          Authorization: "Bearer {{login_details.json.sessionId}}"
+      register: new_browser_session_timeout_details
+
+    - name: Log002 - Check Browser Session details
+      debug:
+        var: new_browser_session_timeout_details.json
+
+

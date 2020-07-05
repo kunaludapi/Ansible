@@ -1,0 +1,72 @@
+---
+- name: Log Insight API login and NTP Configuration
+  hosts: winclients
+  gather_facts: no
+  
+  tasks:
+    - name: Include Secret Environment Items
+      include_vars:
+        file: secrets.yml
+        name: secret
+    
+    - name: Get service detail
+      win_service:
+        name: LogInsightAgentService
+      register: win_liagent_info
+
+    - name: Install Log insight agent if not installed
+      block:
+        - name: Checking Log Insight Agent service exist
+          set_fact:
+            win_liagent_status: "{{win_liagent_info.state}}"
+          no_log: true
+        
+        - name: Status of Log Insight Agent service
+          debug:
+            msg: "Log Insight agent status is {{win_liagent_status}}"
+      
+      rescue:
+        - name: Log Insight agent service not found - Download agent
+          win_get_url:
+            url: "{{secret.artifactory}}/{{secret.liagentmsi}}"
+            dest: "{{secret.liagent_folder}}"
+
+        - name: Install Log Insight MSI
+          win_package:
+            path: "{{secret.liagent_folder}}"
+            state: present
+
+        - name: sleep for 15 seconds until Log Agent Service is initialized and continue with play
+          wait_for:
+            timeout: 15
+          delegate_to: localhost
+
+        - name: Recheck Log Insight service detail
+          win_service:
+            name: LogInsightAgentService
+          register: recheck_win_liagent_info
+        
+        - name: New Status of Log Insight Agent service
+          debug:
+            msg: "Log Insight agent status is {{recheck_win_liagent_info.state}}"
+        
+        - name: Delete rpm file
+          win_file:
+            path: "{{secret.liagent_folder}}"
+            state: absent
+
+        - name: download and update liagent.ini configuration (Modify later with .zip file)
+          win_get_url:
+            url: "{{secret.liagent_wininiurl}}"
+            dest: "{{secret.liagent_winlocalini}}"
+            force: True
+        ##Make this configuration for Zip and extract instead of adding MIME type
+          
+        - name: Restart Log Insight service after Configuration
+          win_service:
+            name: LogInsightAgentService
+          register: restarted_win_liagent_info
+        
+        - name: New Status of Log Insight Agent service
+          debug:
+            msg: "Log Insight agent status is {{restarted_win_liagent_info.state}}"

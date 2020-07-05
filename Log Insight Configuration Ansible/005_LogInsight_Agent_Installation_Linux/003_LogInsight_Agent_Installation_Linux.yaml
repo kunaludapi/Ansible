@@ -1,0 +1,81 @@
+---
+- name: Log Insight API login and NTP Configuration
+  hosts: linuxclients
+  gather_facts: no
+  
+  tasks:
+    - name: Include Secret Environment Items
+      include_vars:
+        file: secrets.yml
+        name: secret
+    
+    - name: Populate service facts
+      service_facts:
+
+    - name: Install Log insight agent if not installed
+      block:
+        - name: Checking Log Insight Agent liagentd daemon status
+          set_fact:
+            liagentd_status: "{{ansible_facts.services['liagentd.service'].state}}"
+          no_log: true
+        
+        - name: Status of Log Insight Agent liagentd daemon 
+          debug:
+            msg: "Log Insight agent status is {{liagentd_status}}"
+
+      rescue:
+        - name: Log Insight agent not found - Download agent
+          shell: "curl -k -o /tmp/{{secret.liagentrpm}} {{secret.artifactory}}/{{secret.liagentrpm}} --noproxy '*'"
+        
+        - name: Set downloaded rpm file execution permission
+          file:
+            path: "/tmp/{{secret.liagentrpm}}"
+            mode: 0755
+       
+        - name: Install Log Insight agent RPM package
+          yum:
+            name: "/tmp/{{secret.liagentrpm}}" #local downloaded file installation
+            #name: "{{secret.artifactory}}/{{secret.liagentrpm}}" #directly install rpm from artifactory url
+            state: present
+          
+        - name: Populate service facts again
+          service_facts:
+
+        - name: New status of Log Insight Agent liagentd daemon 
+          debug:
+            msg: "Log Insight agent status is {{ansible_facts.services['liagentd.service'].state}}"
+        
+        - name: Delete rpm file
+          file:
+            path: "/tmp/{{secret.liagentrpm}}"
+            state: absent
+        
+        - name: Configure liagent.ini file
+          ini_file:
+            path: /etc/liagent.ini
+            section: "{{ item.section }}"
+            option: "{{ item.option }}"
+            value: "{{ item.value }}"
+            create: no
+            state: present
+            no_extra_spaces: yes
+          with_items:
+            - { section: 'server', option: 'hostname', value: '{{ secret.lihostname }}'}
+            - { section: 'server', option: 'proto', value: '{{ secret.liproto }}'}
+            - { section: 'server', option: 'port', value: '{{ secret.liport }}'}
+            - { section: 'filelog|syslog', option: 'directory', value: '{{ secret.lilog_directory }}'}
+            - { section: 'filelog|syslog', option: 'include', value: '{{ secret.lilog_include }}'}
+            #- { section: 'server', option: 'ssl', value: '{{ secret.lissl }}'}
+            #- { section: 'update', option: 'auto_update', value: '{{ secret.liauto_update }}'}
+          
+        - name: Restart Log Insight Agent liagentd daemon
+          service:
+            name: liagentd
+            state: restarted
+
+        - name: Populate service facts again
+          service_facts:
+
+        - name: recheck status of Log Insight Agent liagentd daemon after restart service
+          debug:
+            msg: "Log Insight agent status is {{ansible_facts.services['liagentd.service'].state}}"

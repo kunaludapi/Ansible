@@ -1,0 +1,68 @@
+---
+- name: Log Insight IPv6
+  hosts: loginsight
+  gather_facts: no
+  
+  tasks:
+    - name: Include Secret Environment Items
+      include_vars:
+        file: secrets.yml
+        name: secret
+
+#001
+    - name: 001. Check line in the file
+      shell: grep -e "^/usr/sbin/sysctl -w net.ipv6.conf.eth0.disable_ipv6=" -e "^/usr/sbin/sysctl -w net.ipv6.conf.lo.disable_ipv6=" /opt/vmware/bin/loginsight_adjust_network.sh
+      register: network_IPV6_conf
+    
+    - name: Log001 - loginsight_adjust_network.sh - line details
+      debug:
+        var: network_IPV6_conf.stdout_lines
+
+#001.1 and 002.1
+    - name: 001.1. disable eth0 IPv6 in loginsight_adjust_network.sh
+      when: '"/usr/sbin/sysctl -w net.ipv6.conf.eth0.disable_ipv6=1" not in network_IPV6_conf.stdout_lines'
+      lineinfile:
+        path: /opt/vmware/bin/loginsight_adjust_network.sh
+        regexp: '^/usr/sbin/sysctl -w net.ipv6.conf.eth0.disable_ipv6='
+        line: /usr/sbin/sysctl -w net.ipv6.conf.eth0.disable_ipv6=1
+      #check_mode: yes
+      register: update_IPV6_conf_01
+
+    - name: Log001.1 - loginsight_adjust_network.sh - Show modified line task details
+      debug:
+        #msg: "{{update_IPV6_conf}}"
+        var: update_IPV6_conf_01
+      when: ('"true" in update_IPV6_conf_01.changed')
+
+    - name: 001.2. disable lo IPv6 in loginsight_adjust_network.sh
+      when: '"/usr/sbin/sysctl -w net.ipv6.conf.lo.disable_ipv6=1" not in network_IPV6_conf.stdout_lines'
+      lineinfile:
+        path: /opt/vmware/bin/loginsight_adjust_network.sh
+        regexp: '^/usr/sbin/sysctl -w net.ipv6.conf.lo.disable_ipv6='
+        line: /usr/sbin/sysctl -w net.ipv6.conf.lo.disable_ipv6=1
+      #check_mode: yes
+      register: update_IPV6_conf_02
+      
+    - name: Log001.2 - loginsight_adjust_network.sh - Show modified line task details
+      debug:
+        #msg: "{{update_IPV6_conf}}"
+        var: update_IPV6_conf_02
+      when: ('"true" in update_IPV6_conf_02.changed')
+
+##002
+    - name: 002. Check line in the file
+      shell: grep -e "^/usr/sbin/sysctl -w net.ipv6.conf.eth0.disable_ipv6=" -e "^/usr/sbin/sysctl -w net.ipv6.conf.lo.disable_ipv6=" /opt/vmware/bin/loginsight_adjust_network.sh
+      register: new_IPV6_conf
+    
+    - name: Log002 - loginsight_adjust_network.sh - line details
+      debug:
+        var: new_IPV6_conf.stdout_lines
+
+##003
+    - name: 003. Execute commands
+      shell: /usr/sbin/sysctl -w net.ipv6.conf.eth0.disable_ipv6=1 && /usr/sbin/sysctl -w net.ipv6.conf.lo.disable_ipv6=1
+      register: noreboot_IPV6_conf
+
+    - name: Log002 - loginsight_adjust_network.sh - line details
+      debug:
+        var: noreboot_IPV6_conf.stdout_lines

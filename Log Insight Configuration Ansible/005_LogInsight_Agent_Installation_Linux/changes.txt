@@ -1,0 +1,9 @@
+#001. Added ntpServers as variable and updated secrets.yml  - #Folder - 003_LogInsight_API_IPv6
+#002. Username and Password variable updated to reflect correctly for UI and SSH    - #Folder - 003_LogInsight_API_IPv6
+#003. Renamed yaml script to reflect better and added disable IPv6 script    - #Folder - 003_LogInsight_API_IPv6
+#004. Added ansible_commands.txt    - #Folder - 003_LogInsight_API_IPv6
+#005. Set Browser Session Time Out settings - #Folder - 004_LogInsight_Time_out
+#006. updated secrets for browser session  - #Folder - 004_LogInsight_Time_out
+#007. Added Agent Installation for Linux - #Folder - 005_LogInsight_Agent_Installation_Linux
+#008. Added Linux agent artifactory url - #Folder - 005_LogInsight_Agent_Installation_Linux
+#009. Added Linux agent configuration info - #Folder - 005_LogInsight_Agent_Installation_Linux

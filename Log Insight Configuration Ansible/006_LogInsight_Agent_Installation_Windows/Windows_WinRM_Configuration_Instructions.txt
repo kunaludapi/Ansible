@@ -1,0 +1,44 @@
+Ansible server require below Python pip module to be installed to manage windows server
+> pip install "pywinrm >= 0.3.0"
+> pip list
+
+Windows client system need to be prepared, by configuring winrm with anisble ps1 scripts
+#https://docs.ansible.com/ansible/latest/user_guide/windows_setup.html
+
+Once Powershell has been upgraded to at least version 3.0, the final step is for the WinRM service to be configured so that Ansible can connect to it. There are two main components of the WinRM service that governs how Ansible can interface with the Windows host: the listener and the service configuration settings.
+Details about each component can be read below, but the script ConfigureRemotingForAnsible.ps1 can be used to set up the basics. This script sets up both HTTP and HTTPS listeners with a self-signed certificate and enables the Basic authentication option on the service.
+
+###-------##Start of Code##-------###
+$url = "https://raw.githubusercontent.com/ansible/ansible/devel/examples/scripts/ConfigureRemotingForAnsible.ps1"
+$file = "$env:temp\ConfigureRemotingForAnsible.ps1"
+(New-Object -TypeName System.Net.WebClient).DownloadFile($url, $file)
+powershell.exe -ExecutionPolicy ByPass -File $file
+###-------##End of Code##-------###
+
+and use ntlm for authentication
+
+<#
+Ansible requires PowerShell version 3.0 and .NET Framework 4.0 or newer to function on older operating systems like Server 2008 and Windows 7. The base image does not meet this requirement. You can use the Upgrade-PowerShell.ps1 script to update these.
+
+###-------##Start of Code##-------###
+$url = "https://raw.githubusercontent.com/jborean93/ansible-windows/master/scripts/Upgrade-PowerShell.ps1"
+$file = "$env:temp\Upgrade-PowerShell.ps1"
+$username = "Administrator"
+$password = "Password"
+(New-Object -TypeName System.Net.WebClient).DownloadFile($url, $file)
+Set-ExecutionPolicy -ExecutionPolicy Unrestricted -Force
+# Version can be 3.0, 4.0 or 5.1
+&$file -Version 5.1 -Username $username -Password $password -Verbose
+###-------##End of Code##-------###
+#>
+
+<#
+When running on PowerShell v3.0, there is a bug with the WinRM service that limits the amount of memory available to WinRM. Without this hotfix installed, Ansible will fail to execute certain commands on the Windows host. These hotfixes should installed as part of the system bootstrapping or imaging process. The script Install-WMF3Hotfix.ps1 can be used to install the hotfix on affected hosts.
+
+###-------##Start of Code##-------###
+$url = "https://raw.githubusercontent.com/jborean93/ansible-windows/master/scripts/Install-WMF3Hotfix.ps1"
+$file = "$env:temp\Install-WMF3Hotfix.ps1"
+(New-Object -TypeName System.Net.WebClient).DownloadFile($url, $file)
+powershell.exe -ExecutionPolicy ByPass -File $file -Verbose
+###-------##End of Code##-------###
+#>

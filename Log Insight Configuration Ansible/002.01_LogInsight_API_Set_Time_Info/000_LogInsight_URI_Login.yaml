@@ -1,0 +1,80 @@
+---
+- name: Log Insight
+  hosts: localhost
+  gather_facts: no
+  
+  tasks:
+    - name: Include Secret Environment Items
+      include_vars:
+        file: secrets.yml
+        name: secret
+
+    - name: 01. Log Insight Login
+      uri:
+        url: "https://{{secret.server}}:9543/api/v1/sessions"
+        method: POST
+        body: 
+          username: "{{secret.username}}"
+          password: "{{secret.password}}"
+          provider: "{{secret.provider}}"
+        body_format: json
+        status_code: 200
+        validate_certs: no
+        use_proxy: no
+      register: login_details
+    
+    #- name: Message01 - login_details
+    #  debug:
+        #msg: "{{login_details.json}}"
+    #    var: login_details.json
+    
+    #https://vmw-loginsight.github.io/#time_config
+    - name: 2. Get Time Information
+      uri:
+        url: "https://{{secret.server}}:9543/api/v1/time/config"
+        validate_certs: no
+        headers:
+          Authorization: "Bearer {{login_details.json.sessionId}}"
+      register: time_details
+      #"0.vmware.pool.ntp.org", 
+      #"1.vmware.pool.ntp.org", 
+      #"2.vmware.pool.ntp.org", 
+      #"3.vmware.pool.ntp.org"
+
+    - name: Message02 - Check Time server details
+      debug:
+        var: time_details.json
+
+    #https://vmw-loginsight.github.io/#time_config
+    - name: 3. Set Time Information
+      uri:
+        url: "https://{{secret.server}}:9543/api/v1/time/config"
+        method: PUT
+        body:
+          timeReference: NTP_SERVER
+          ntpServers:
+            - 192.168.34.11
+            - 192.168.34.12
+        body_format: json            
+        validate_certs: no
+        headers:
+          Authorization: "Bearer {{login_details.json.sessionId}}"
+      register: set_time_details
+
+    #https://vmw-loginsight.github.io/#time_config
+    - name: 4. Get Time Information again
+      uri:
+        url: "https://{{secret.server}}:9543/api/v1/time/config"
+        validate_certs: no
+        headers:
+          Authorization: "Bearer {{login_details.json.sessionId}}"
+      register: new_time_details
+
+    - name: Message03 - Check new Time server details
+      debug:
+        var: new_time_details.json
+
+#curl -k -X POST https://loginsight.example.com:9543/api/v1/sessions \
+#    -d '{"username":"admin","password":"Secret!","provider":"Local"}'
+
+#curl -k -X POST https://192.168.34.15:9543/api/v1/sessions -d '{"username":"admin","password":"Computer@1","provider":"Local"}' --noproxy '*'

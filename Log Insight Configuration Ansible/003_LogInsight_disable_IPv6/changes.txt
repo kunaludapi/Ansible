@@ -1,0 +1,4 @@
+#001. Added ntpServers as variable and updated secrets.yml  - #Folder - 003_LogInsight_API_IPv6
+#002. Username and Password variable updated to reflect correctly for UI and SSH    - #Folder - 003_LogInsight_API_IPv6
+#003. Renamed yaml script to reflect better and added disable IPv6 script    - #Folder - 003_LogInsight_API_IPv6
+#004. Added ansible_commands.txt    - #Folder - 003_LogInsight_API_IPv6

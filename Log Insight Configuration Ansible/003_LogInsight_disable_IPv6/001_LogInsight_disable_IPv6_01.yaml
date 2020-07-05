@@ -1,0 +1,41 @@
+---
+- name: Log Insight IPv6
+  hosts: loginsight
+  gather_facts: no
+  
+  tasks:
+    - name: Include Secret Environment Items
+      include_vars:
+        file: secrets.yml
+        name: secret
+
+    - name: 001. Check line in the file
+      shell: awk /^NETWORKING_IPV6=/ /etc/sysconfig/network
+      register: network_IPV6_conf
+    
+    - name: Log001 - /etc/sysconfig/network - line details
+      debug:
+        var: network_IPV6_conf.stdout_lines
+
+    - name: 001.1. disable IPv6 in /etc/sysconfig/network
+      when: '"NETWORKING_IPV6=no" not in network_IPV6_conf.stdout_lines'
+      lineinfile:
+        path: /etc/sysconfig/network
+        regexp: '^NETWORKING_IPV6='
+        line: NETWORKING_IPV6=no
+      #check_mode: yes
+      register: update_IPV6_conf
+      
+    - name: Log001.1 - /etc/sysconfig/network - Show modified line task details
+      debug:
+        #msg: "{{update_IPV6_conf}}"
+        var: update_IPV6_conf
+      when: ('"true" in update_IPV6_conf.changed')
+    
+    - name: 002. Check line in the file
+      shell: awk /^NETWORKING_IPV6=/ /etc/sysconfig/network 
+      register: new_network_IPV6_conf
+    
+    - name: Log001 - /etc/sysconfig/network - line details
+      debug:
+        var: new_network_IPV6_conf.stdout_lines

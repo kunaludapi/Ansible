@@ -1,0 +1,47 @@
+---
+- name: Log Insight
+  hosts: localhost
+  gather_facts: no
+  
+  tasks:
+    - name: Include Secret Environment Items
+      include_vars:
+        file: secrets.yml
+        name: secret
+
+    - name: Log Insight Login
+      uri:
+        url: "https://{{secret.server}}:9543/api/v1/sessions"
+        method: POST
+        body: 
+          username: "{{secret.username}}"
+          password: "{{secret.password}}"
+          provider: "{{secret.provider}}"
+        body_format: json
+        status_code: 200
+        validate_certs: no
+        use_proxy: no
+      register: login_details
+    
+    - name: Print message01 - login_details
+      debug:
+        #msg: "{{login_details.json}}"
+        var: login_details.json      
+
+    - name: Get Time Information
+      uri:
+        url: "https://{{secret.server}}:9543/api/v1/time/config"
+        validate_certs: no
+        headers:
+          Authorization: "Bearer {{login_details.json.sessionId}}"
+      register: time_details
+
+    - name: Print message02 - Time server details
+      debug:
+        var: time_details.json
+
+
+#curl -k -X POST https://loginsight.example.com:9543/api/v1/sessions \
+#    -d '{"username":"admin","password":"Secret!","provider":"Local"}'
+
+#curl -k -X POST https://192.168.34.15:9543/api/v1/sessions -d '{"username":"admin","password":"Computer@1","provider":"Local"}' --noproxy '*'

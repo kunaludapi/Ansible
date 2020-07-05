@@ -1,0 +1,75 @@
+---
+- name: Log Insight API login and NTP Configuration
+  hosts: localhost
+  gather_facts: no
+  
+  tasks:
+    - name: Include Secret Environment Items
+      include_vars:
+        file: secrets.yml
+        name: secret
+
+    - name: 001. Log Insight Login
+      uri:
+        url: "https://{{secret.server}}:9543/api/v1/sessions"
+        method: POST
+        body: 
+          username: "{{secret.ui_username}}"
+          password: "{{secret.ui_password}}"
+          provider: "{{secret.provider}}"
+        body_format: json
+        status_code: 200
+        validate_certs: no
+        use_proxy: no
+      register: login_details
+    
+    #- name: Log001 - login_details
+    #  debug:
+        #msg: "{{login_details.json}}"
+    #    var: login_details.json
+    
+    #https://vmw-loginsight.github.io/#time_config
+    - name: 002. Get Time Information
+      uri:
+        url: "https://{{secret.server}}:9543/api/v1/time/config"
+        validate_certs: no
+        headers:
+          Authorization: "Bearer {{login_details.json.sessionId}}"
+      register: time_details
+      #"0.vmware.pool.ntp.org", 
+      #"1.vmware.pool.ntp.org", 
+      #"2.vmware.pool.ntp.org", 
+      #"3.vmware.pool.ntp.org"
+
+    - name: Log002 - Check Time server details
+      debug:
+        var: time_details.json
+
+    #https://vmw-loginsight.github.io/#time_config
+    - name: 003. Set Time Information
+      uri:
+        url: "https://{{secret.server}}:9543/api/v1/time/config"
+        method: PUT
+        body:
+          timeReference: NTP_SERVER
+          ntpServers: "{{secret.ntpServers}}" 
+        body_format: json            
+        validate_certs: no
+        headers:
+          Authorization: "Bearer {{login_details.json.sessionId}}"
+      register: set_time_details
+
+    #https://vmw-loginsight.github.io/#time_config
+    - name: 004. Get Time Information again
+      uri:
+        url: "https://{{secret.server}}:9543/api/v1/time/config"
+        validate_certs: no
+        headers:
+          Authorization: "Bearer {{login_details.json.sessionId}}"
+      register: new_time_details
+
+    - name: Log003 - Check new Time server details
+      debug:
+        var: new_time_details.json
+
+
